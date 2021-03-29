@@ -18,7 +18,7 @@ total_routers = 0
 core_routers = []
 bd_routers = []
 others = []
-fname = "cites-cisco-parsed/cisco"
+fname = "../parsed/cisco"
 for f in os.listdir(fname):
 	if "json" in f:
 		total_routers += 1
@@ -51,7 +51,7 @@ def split_ip_to_ints(ips):
 core_routers = sorted( core_routers, key=lambda x: len(x[1]["fw_table"]) )
 print(core_routers[-2][0])
 
-fw_table = core_routers[-1][1]["fw_table"] #array of entries.
+fw_table = core_routers[1][1]["fw_table"] #array of entries.
 
 # filter out entries for which action is not a next hop
 possible_outputs = [ x["action"]["py/tuple"][0] for x in fw_table ] # contains all possible next hop ips, and drop, etc.
@@ -115,7 +115,7 @@ for elem in fw_table:
 
 # print("TEST: ", convert_ip_to_int("2.5.3.4"))
 # split data into train, test
-x_train, x_test, y_train, y_test = train_test_split(x,y,train_size=5000, random_state=21)
+x_train, x_test, y_train, y_test = train_test_split(x,y,train_size=2500, random_state=21)
 
 print(len(x_train), len(x_test), len(y_train), len(y_test))
 print(x_train[0], y_train[0], " FIRST elem of train data")
