@@ -3,7 +3,7 @@ import os
 import time
 import json
 import random
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
@@ -14,6 +14,8 @@ from sklearn.metrics import confusion_matrix,classification_report,accuracy_scor
 from sklearn.tree import DecisionTreeClassifier
 from sklearn.linear_model import LogisticRegression
 from sklearn import svm
+from sklearn.tree import export_graphviz
+from graphviz import Source
 
 
 HEAVY_HITTER_THRESH = 0.05
@@ -87,6 +89,7 @@ def prefix_features(ip_prefix):
 	ip, prefix = ip_prefix.replace('*', '').split('/')
 	return [int(x) for x in ip.split('.')] # + [int(prefix)]
 
+feature_names = ['IP-1', 'IP-2', 'IP-3', 'IP-4', 'Prefix Len']
 
 def check_model(m, ms, xtr, ytr, xte, yte):
 	t1 = time.time()
@@ -96,12 +99,21 @@ def check_model(m, ms, xtr, ytr, xte, yte):
 	print(accuracy_score(yte, mpred), " Accuracy score FOR model ", ms)
 	conf_mat = confusion_matrix(y_test, mpred)
 	print(conf_mat.shape, " FOR model: ", ms, " TrainTime: ", t2-t1)
+	dt = m
+	if "RandomForest" in ms:
+		dt = m.estimators_[0]
+	export_graphviz(dt, out_file=ms+'.dot', 
+                feature_names = feature_names,
+                rounded = True, proportion = False, 
+                precision = 2, filled = True)
+	s = Source.from_file(ms+'.dot')
+	s.view()
 
 total_routers = 0
 core_routers = []
 bd_routers = []
 others = []
-fname = "../parsed/cisco"
+fname = sys.argv[1] #"../parsed/cisco"
 for f in os.listdir(fname):
 	if "json" in f:
 		total_routers += 1
@@ -114,7 +126,7 @@ for f in os.listdir(fname):
 		else:
 			others.append(f)
 
-print(len(core_routers), len(bd_routers), len(others) )
+print(len(core_routers), len(bd_routers), len(others))
 
 core_routers = sorted( core_routers, key=lambda x: len(x[1]["fw_table"]) )
 

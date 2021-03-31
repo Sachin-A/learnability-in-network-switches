@@ -138,7 +138,7 @@ for elem in fw_table:
 
 # print("TEST: ", convert_ip_to_int("2.5.3.4"))
 # split data into train, test
-train_sz = (len(fw_table)*7)//10
+train_sz = (len(x)*7)//10
 print("Train sz: ", train_sz, " len of x: ", len(x), " nonTop x: ", len(x_nonTop))
 x_train, x_test, y_train, y_test = train_test_split(x,y,train_size=train_sz, random_state=21)
 
@@ -152,7 +152,7 @@ def check_model(m, ms, xtr, ytr, xte, yte):
 	m.fit(xtr, ytr)
 	t2 = time.time()
 	mpred = m.predict(xte)
-	print(mpred)
+	# print(mpred)
 	print(accuracy_score(yte, mpred), " Accuracy score FOR model ", ms)
 	conf_mat = confusion_matrix(y_test, mpred)
 	print(conf_mat.shape, " FOR model: ", ms, " TrainTime: ", t2-t1)
