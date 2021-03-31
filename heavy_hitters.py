@@ -24,6 +24,10 @@ def plot_ports_freq(counts, name):
 	ports, freq = zip(*sorted_ports_freq)
 	fig = plt.figure(figsize = (20,10))
 	plt.bar(ports, freq)
+	font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 16}
+	plt.rc('font', **font)
 	plt.xlabel("Output ports")
 	plt.ylabel("Number of mapped entries")
 	plt.title("Frequency for %s" %(name))
@@ -31,6 +35,25 @@ def plot_ports_freq(counts, name):
 	# plt.show()
 	plt.savefig("./plots/%s_port_freq.png" %(name))
 	print(name, freq[-5:])
+
+def plot_heavy_hitters(ip_prefix, hh, name):
+	ip_prefix_hh = zip(ip_prefix, hh)
+	ip_hh = [(x.split('/')[0], y) for x, y in ip_prefix_hh]
+	sorted_ip_hh = sorted(ip_hh, key=lambda x: x[0])
+	ip, hh = zip(*sorted_ip_hh)
+	fig = plt.figure(figsize = (20,10))
+	plt.bar(ip, hh)
+	font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 16}
+	plt.rc('font', **font)
+	plt.xlabel("Sorted destination IPs")
+	plt.ylabel("Heavy Hitter")
+	plt.title("Pattern for %s" %(name))
+	plt.xticks([])
+	# plt.show()
+	plt.savefig("./plots/%s_hh_pattern.png" %(name))
+	
 
 def heavy_hitters(counts):
 	ports, freq = zip(*list(counts.items()))
@@ -54,7 +77,7 @@ def find_heavy_hitters(cr):
 		if port not in counts_at_ports:
 			counts_at_ports[port] = 0
 		counts_at_ports[port] += 1
-	# plot_ports_freq(counts_at_ports, cr[1]['name'])
+	plot_ports_freq(counts_at_ports, cr[1]['name'])
 	heavy_hits = heavy_hitters(counts_at_ports)
 	x, y = classify_prefixes_by_hh(prefix_port_tup, heavy_hits)
 	print("%s: %d heavy hitter counts, %d non-heavy hitters count" %(cr[1]['name'], sum(y), len(y)-sum(y)))
@@ -62,7 +85,7 @@ def find_heavy_hitters(cr):
 
 def prefix_features(ip_prefix):
 	ip, prefix = ip_prefix.replace('*', '').split('/')
-	return [int(x) for x in ip.split('.')] + [int(prefix)]
+	return [int(x) for x in ip.split('.')] # + [int(prefix)]
 
 
 def check_model(m, ms, xtr, ytr, xte, yte):
@@ -96,20 +119,21 @@ print(len(core_routers), len(bd_routers), len(others) )
 core_routers = sorted( core_routers, key=lambda x: len(x[1]["fw_table"]) )
 
 for cr in core_routers:
-	if cr[1]['name'] == 'core4-1':
-		xs,ys = find_heavy_hitters(cr)
-		xs = [prefix_features(x) for x in xs]
-		x_train, x_test, y_train, y_test = train_test_split(xs,ys,train_size=int(len(ys)*0.8), random_state=21)
+	# if cr[1]['name'] == 'core5-1':
+	xs,ys = find_heavy_hitters(cr)
+	# plot_heavy_hitters(xs, ys, cr[1]['name'])
+	xs = [prefix_features(x) for x in xs]
+	x_train, x_test, y_train, y_test = train_test_split(xs,ys,train_size=int(len(ys)*0.8), random_state=21)
 
-		dt_model = DecisionTreeClassifier()
-		check_model(dt_model, "Decision Tree", x_train, y_train, x_test, y_test)
+	dt_model = DecisionTreeClassifier()
+	check_model(dt_model, "Decision Tree", x_train, y_train, x_test, y_test)
 
-		rfc_model = RandomForestClassifier(n_estimators=10) # TODO2: add tree depth parameter
-		check_model(rfc_model, "Random Forest", x_train, y_train, x_test, y_test)
+	rfc_model = RandomForestClassifier(n_estimators=10) # TODO2: add tree depth parameter
+	check_model(rfc_model, "Random Forest", x_train, y_train, x_test, y_test)
 
-		ada_model = AdaBoostClassifier(
-		    DecisionTreeClassifier(max_depth=5), n_estimators=100)
-		check_model(ada_model, "ADA + DT", x_train, y_train, x_test, y_test)
+	ada_model = AdaBoostClassifier(
+	    DecisionTreeClassifier(max_depth=5), n_estimators=100)
+	check_model(ada_model, "ADA + DT", x_train, y_train, x_test, y_test)
 
 
 

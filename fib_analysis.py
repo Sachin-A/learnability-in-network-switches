@@ -24,6 +24,10 @@ def plot_sorted_fanout(prefixes, outports, name):
 	plottable_prefix_port = [(x,unique_ports.index(y)+1) for (x,y) in sorted_prefix_port]
 	plt_prefixes, plt_ports = zip(*plottable_prefix_port)
 	fig = plt.figure(figsize = (20,10))
+	font = {'family' : 'normal',
+        'weight' : 'normal',
+        'size'   : 16}
+	plt.rc('font', **font)
 	plt.bar(plt_prefixes, plt_ports)
 	plt.xlabel("Sorted Prefixes (converted to int)")
 	plt.ylabel("Port numbers")
