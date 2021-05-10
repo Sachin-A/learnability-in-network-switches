@@ -3,6 +3,7 @@ import os
 import time
 import json
 import random
+import collections
 
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.ensemble import RandomForestRegressor
@@ -113,6 +114,11 @@ x_nonTop = []
 y_nonTop = []
 
 zero_ct = 0
+x_all = []
+y_all = []
+
+fib = []
+prefixList = []
 
 # Trying just topK classes.
 feature_names = ['IP-1', 'IP-2', 'IP-3', 'IP-4']
@@ -145,6 +151,33 @@ for elem in fw_table:
 		else:
 			zero_ct += 1
 
+			x_all.append(xi)
+			y_all.append(yval)
+
+			fib.append({
+				'prefix': prefix,
+				'nextHop': yi,
+				'prefixLen': xi[0],
+				'ip1': xi[1],
+				'ip2': xi[2],
+				'ip3': xi[3],
+				'ip4': xi[4],
+				'nextHopInt': yval
+			})
+
+			prefixList.append(ip)
+
+'''
+	Dump duplicate prefixes (without prefix len)
+'''
+print(chosen_core_name)
+print([item for item, count in collections.Counter(prefixList).items() if count > 1])
+print(len([item for item, count in collections.Counter(prefixList).items() if count > 1]))
+print(len(set(prefixList)) == len(prefixList))
+
+with open('data/cisco/' + chosen_core_name, 'w') as outfile:
+	json.dump(fib, outfile, indent = 4)
+
 # print("TEST: ", convert_ip_to_int("2.5.3.4"))
 # split data into train, test
 
@@ -175,9 +208,9 @@ def check_model(m, ms, xtr, ytr, xte, yte):
 	if "RandomForest" in ms:
 		dt = m.estimators_[0]
 	export_graphviz(dt, out_file=ms+'.dot', 
-                feature_names = feature_names,
-                rounded = True, proportion = False, 
-                precision = 2, filled = True)
+				feature_names = feature_names,
+				rounded = True, proportion = False, 
+				precision = 2, filled = True)
 	s = Source.from_file(ms+'.dot')
 	s.view()
 
