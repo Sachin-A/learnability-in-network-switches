@@ -52,11 +52,13 @@ def split_ip_to_ints(ips):
 # getting the router with max #entries
 
 core_routers = sorted( core_routers, key=lambda x: len(x[1]["fw_table"]) )
-print(core_routers[-2][0])
+print(core_routers[-2][0], " : ind -2 in core routers list")
 
 chosen_core = int(sys.argv[3])
 chosen_core_name = core_routers[chosen_core][0]
 fw_table = core_routers[chosen_core][1]["fw_table"] #array of entries.
+
+print("chosen core router: ", chosen_core_name, " FWTable len: ", len(fw_table))
 
 # filter out entries for which action is not a next hop
 possible_outputs = [ x["action"]["py/tuple"][0] for x in fw_table ] # contains all possible next hop ips, and drop, etc.
@@ -82,6 +84,9 @@ print(output_str_input_distr)
 for k in output_nhop_input_distr:
 	if output_nhop_input_distr[k] > 1:
 		print(k, output_nhop_input_distr[k], " >1 PREFIXES!")
+		
+outports = set([ (x["action"]["py/tuple"][1]) for x in fw_table ])
+print(len(outports), outports)
 
 possible_outputs_str = list(filter(lambda x: "." not in x, possible_outputs))
 possible_outputs_nhop = list(filter(lambda x: "." in x, possible_outputs))
@@ -89,7 +94,7 @@ possible_outputs_nhop = list(filter(lambda x: "." in x, possible_outputs))
 possible_outputs_str = set(possible_outputs_str)
 possible_outputs_nhop = set(possible_outputs_nhop)
 
-print(possible_outputs_str, len(possible_outputs_nhop), len(output_nhop_ids))
+print(" String outputs: ", possible_outputs_str, " #Unique nextHops: ", len(possible_outputs_nhop), len(output_nhop_ids))
 
 output_nhop_list = [(k, v) for k, v in output_nhop_input_distr.items()]
 # sort based on #prefixes mapped.
@@ -107,8 +112,10 @@ y = []
 x_nonTop = []
 y_nonTop = []
 
+zero_ct = 0
+
 # Trying just topK classes.
-feature_names = ['Prefix Len', 'IP-1', 'IP-2', 'IP-3', 'IP-4']
+feature_names = ['IP-1', 'IP-2', 'IP-3', 'IP-4']
 for elem in fw_table:
 	yi = elem["action"]["py/tuple"][0]
 	# ignoring attach/recv/drop AND ip prefixes with *
@@ -117,14 +124,14 @@ for elem in fw_table:
 		prefix = elem["prefix"]
 		ip = prefix.split('/')[0]
 		# prefix length
-		xi.append(int(prefix.split('/')[1]))
+		# xi.append(int(prefix.split('/')[1]))
 		# 4-split of ip
 		xi += split_ip_to_ints(ip)
 		# ip to 32-bit integer
 		# xi.append(convert_ip_to_int(ip))
 
 		if convert_ip_to_int(ip) > 0:
-			yval = convert_ip_to_int(yi) #output_nhop_ids[yi]
+			yval = output_nhop_ids[yi] #convert_ip_to_int(yi)
 			
 			if yi in topK_nexthops:
 				x.append(xi)
@@ -135,12 +142,20 @@ for elem in fw_table:
 
 			if yval % 50 == 7:
 				print(elem, xi, yval)
+		else:
+			zero_ct += 1
 
 # print("TEST: ", convert_ip_to_int("2.5.3.4"))
 # split data into train, test
-train_sz = (len(x)*7)//10
-print("Train sz: ", train_sz, " len of x: ", len(x), " nonTop x: ", len(x_nonTop))
-x_train, x_test, y_train, y_test = train_test_split(x,y,train_size=train_sz, random_state=21)
+
+# binary classification for topK=1 class.
+xnew = x + x_nonTop
+ynew = [1 for xi in x] + [0 for xi in x_nonTop]
+
+train_sz = (len(xnew)*7)//10
+print("Train sz: ", train_sz, " len of x: ", len(x), " nonTop x: ", len(x_nonTop), " 0ct: ", zero_ct, " len xnew: ", len(xnew))
+
+x_train, x_test, y_train, y_test = train_test_split(xnew,ynew,train_size=train_sz, random_state=21)
 
 # Adding the ignored entries to 
 
@@ -155,7 +170,7 @@ def check_model(m, ms, xtr, ytr, xte, yte):
 	# print(mpred)
 	print(accuracy_score(yte, mpred), " Accuracy score FOR model ", ms)
 	conf_mat = confusion_matrix(y_test, mpred)
-	print(conf_mat.shape, " FOR model: ", ms, " TrainTime: ", t2-t1)
+	print(conf_mat, " FOR model: ", ms, " TrainTime: ", t2-t1)
 	dt = m
 	if "RandomForest" in ms:
 		dt = m.estimators_[0]
@@ -166,11 +181,10 @@ def check_model(m, ms, xtr, ytr, xte, yte):
 	s = Source.from_file(ms+'.dot')
 	s.view()
 
-# TODO1: understand confusion matrix
-dt_model = DecisionTreeClassifier(max_depth=4)
+dt_model = DecisionTreeClassifier(max_depth=3)
 check_model(dt_model, chosen_core_name+ "DecisionTree", x_train, y_train, x_test, y_test)
 
-rfc_model = RandomForestClassifier(n_estimators=10, max_depth=4) # TODO2: add tree depth parameter
+rfc_model = RandomForestClassifier(n_estimators=10, max_depth=3)
 check_model(rfc_model, chosen_core_name+ "RandomForest", x_train, y_train, x_test, y_test)
 
 # ada_model = AdaBoostClassifier(
