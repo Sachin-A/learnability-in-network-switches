@@ -19,7 +19,6 @@ using namespace mlpack::tree;
 int main(int argc, char** argv) 
 {
 
-	arma::mat dataset;
 	string path = "../data/cisco/" + string(argv[1]) + ".json";
 	ifstream file(path);
 	Json::Value rawJson;
@@ -46,6 +45,7 @@ int main(int argc, char** argv)
 		// cin >> x;
 	}
 
+	arma::mat dataset;
 	arma::Row<size_t> labels;
 
 	string featuresPath = "../data/cisco/" + string(argv[1]) + "-features-train.csv";
@@ -58,7 +58,7 @@ int main(int argc, char** argv)
 
 	// creating a tree object
 	DecisionTree<GiniGain, BestBinaryNumericSplit, AllCategoricalSplit, AllDimensionSelect, double> dt;
-	// fitting the tree on the dataset (dataset, labels, numClasses, minimumLeafSize).
+	// (dataset, labels, numClasses, minimumLeafSize, minimumGainSplit, maximumDepth).
 	dt.Train(dataset, labels, 2, 10, 1e-7, 3);
 
 	// cout << "Number of children: "<< dt.NumChildren() << "\n";
